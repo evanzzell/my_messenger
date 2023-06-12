@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Chat</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.0/socket.io.js"></script>
+  <style>
+  #chat-list-container {
+    float: right;
+    width: 200px;
+  }
+  #message-container {
+    margin-right: 220px;
+  }
+</style>
+</head>
+<body>
+  <div id="chat-list-container">
+    <h3>Select Chat</h3>
+    <form id="create-chat-form" action="">
+      <input type="text" id="chat-title-input" placeholder="Enter new chat title" />
+      <button type="submit">Create Chat</button>
+    </form>
+    <ul id="chat-list"></ul>
+  </div>
+
+  <h3 id="current-chat-title"></h3>
+  <div id="message-container"></div>
+
+  <form id="message-form" action="" style="display: none;">
+    <input type="hidden" id="user-id-input" value="1" />
+    <input type="hidden" id="chat-id-input" />
+    <input type="text" id="message-input" placeholder="Enter your message" />
+    <button type="submit">Send</button>
+  </form>
+
+  <a href="{{ url_for('logout') }}">Logout</a>
+
+  <script>
+    var socket = io.connect();
+
+    // Handle the form submission to create a new chat
+    document.getElementById('create-chat-form').addEventListener('submit', function(event) {
+      event.preventDefault();
+
+      var title = document.getElementById('chat-title-input').value;
+
+      // Send a POST request to the server to create a new chat
+      var formData = new FormData();
+      formData.append('title', title);
+
+      fetch('/create_chat', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => {
+      window.location.href = '/chat';
+      })
+      .then(data => {
+        // Add the new chat to the chat list
+        var chatList = document.getElementById('chat-list');
+        var chatItem = document.createElement('li');
+        chatItem.innerHTML = data.title;
+        chatItem.dataset.chatId = data.id;
+        chatList.appendChild(chatItem);
+
+        // Clear the chat title input field
+        document.getElementById('chat-title-input').value = '';
+      })
+      .catch(error => {
+        console.error('Error:', error);
+      });
+    });
+
+    // Handle clicking on a chat in the chat list
+    document.getElementById('chat-list').addEventListener('click', function(event) {
+      var chatItem = event.target;
+      if (chatItem.tagName === 'LI') {
+        var chatId = chatItem.dataset.chatId;
+        document.getElementById('chat-id-input').value = chatId;
+        var chatTitle = chatItem.innerHTML;
+        document.getElementById('current-chat-title').innerHTML = chatTitle;
+
+
+        // Clear the message container
+        var messageContainer = document.getElementById('message-container');
+        messageContainer.innerHTML = '';
+
+        // Show the message form
+        document.getElementById('message-form').style.display = 'block';
+
+        // Fetch and display all existing messages in the chat
+        fetch('/messages/' + chatId)
+          .then(response => response.json())
+          .then(data => {
+            data.forEach(function(message) {
+              addMessageToContainer(message);
+            });
+          })
+          .catch(error => {
+            console.error('Error:', error);
+          });
+      }
+    });
+
+    // Handle the form submission to send a message
+    document.getElementById('message-form').addEventListener('submit', function(event) {
+      event.preventDefault();
+
+      var userId = document.getElementById('user-id-input').value;
+      var chatId = document.getElementById('chat-id-input').value;
+      var content = document.getElementById('message-input').value;
+
+      // Send a POST request to the server to create a new message
+      var formData = new FormData();
+      formData.append('user_id', userId);
+      formData.append('chat_id', chatId);
+      formData.append('content', content);
+
+      fetch('/create_message', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => {
+        document.getElementById('message-input').value = ''; // Clear the message input field
+        document.getElementById('message-container').innerHTML = '';
+        fetch('/messages/' + chatId)
+          .then(response => response.json())
+          .then(data => {
+            data.forEach(function(message) {
+              addMessageToContainer(message);
+            });
+          })
+          .catch(error => {
+            console.error('Error:', error);
+          });
+      })
+      .catch(error => {
+        console.error('Error:', error);
+      });
+    });
+
+    // Handle new messages received from the server
+    socket.on('message', function(message) {
+      addMessageToContainer(message);
+    });
+
+    // Function to add a message to the message container
+    function addMessageToContainer(message) {
+      var messageContainer = document.getElementById('message-container');
+      var time = new Date().toISOString();
+      var messageElement = document.createElement('div');
+      messageElement.innerHTML = `<strong>${message.user_login}</strong> (${time}): ${message.content}`;
+
+      messageContainer.appendChild(messageElement);
+    }
+
+    // Fetch and display all existing chats
+    fetch('/chats')
+      .then(response => response.json())
+      .then(data => {
+        var chatList = document.getElementById('chat-list');
+
+        data.forEach(function(chat) {
+          var chatItem = document.createElement('li');
+          chatItem.innerHTML = chat.title;
+          chatItem.dataset.chatId = chat.id;
+          chatList.appendChild(chatItem);
+        });
+      })
+      .catch(error => {
+        console.error('Error:', error);
+      });
+  </script>
+</body>
+</html>

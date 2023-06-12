@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Registration</title>
+</head>
+<body>
+  <h2>Registration</h2>
+  <form id="register-form" method="POST">
+    <input type="text" id="register-username" placeholder="Username" required>
+    <input type="password" id="register-password" placeholder="Password" required>
+    <input type="text" id="register-firstname" placeholder="First Name" required>
+    <input type="text" id="register-lastname" placeholder="Last Name" required>
+    <textarea id="register-bio" placeholder="Bio"></textarea>
+    <button type="submit">Register</button>
+  </form>
+
+  <p>Already have an account? <a href="/login">Log In</a></p>
+
+  <script>
+    document.getElementById('register-form').addEventListener('submit', function(event) {
+      event.preventDefault();
+
+      var username = document.getElementById('register-username').value;
+      var password = document.getElementById('register-password').value;
+      var firstname = document.getElementById('register-firstname').value;
+      var lastname = document.getElementById('register-lastname').value;
+      var bio = document.getElementById('register-bio').value;
+
+      // Create a FormData object and append the form fields
+      var formData = new FormData();
+      formData.append('login', username);
+      formData.append('password', password);
+      formData.append('first_name', firstname);
+      formData.append('last_name', lastname);
+      formData.append('bio', bio);
+
+      // Send a POST request to the server to register the user
+      fetch('/register', {
+        method: 'POST',
+        body: formData
+      })
+        .then(response => {
+      if (response.ok) {
+          // Redirect to the chat page
+          window.location.href = '/chat';
+        }})
+        .then(data => {
+          if (data.error) {
+            alert(data.error);
+          } else {
+            // Redirect the user to the chat page
+            window.location.replace('/chat');
+            window.location.reload();
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+        });
+    });
+  </script>
+</body>
+</html>
